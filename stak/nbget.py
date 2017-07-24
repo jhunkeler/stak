@@ -1,16 +1,23 @@
 #!/usr/bin/env python
+from __future__ import print_function
 import atexit
 import os
 import shutil
+import six
 import sys
+import tarfile
 import tempfile
+
 from . import version
 
 try:
     from urllib.request import urlopen
+    from urllib.error import HTTPError
 except ImportError:
     # Python 2.x compat
-    from urllib import urlopen
+    from urllib2 import urlopen, HTTPError
+
+
 
 CFG = dict(name='stak-notebooks',
            repo='https://github.com/spacetelescope',
@@ -19,17 +26,29 @@ CFG = dict(name='stak-notebooks',
            tmpdir='',
            verbose=False)
 
+def _unpack_archive(filename, destdir):
+    '''Python 2.7 compat
+    We prefer shutil.unpack_archive but this will have to do.
+    '''
+    with tarfile.open(filename, 'r:*') as tarball:
+        tarball.extractall(destdir)
+
 
 def download(url, destdir):
     bsize = 4096
     filename = os.path.join(destdir, os.path.basename(url))
 
-    with open(filename, 'w+b') as ofp:
-        with urlopen(url) as data:
+    try:
+        with open(filename, 'w+b') as ofp:
+            data = urlopen(url)
             chunk = data.read(bsize)
             while chunk:
                 ofp.write(chunk)
                 chunk = data.read(bsize)
+            data.close()
+    except HTTPError as e:
+        print('Requested invalid release version: {}\n(Developers, use "-l" for latest master)\n\nReason: {}\n'.format(version.__version__, e), file=sys.stderr)
+        exit(1)
 
     return filename
 
@@ -86,8 +105,12 @@ def main():
     # Extract archive in temp directory
     if CFG['verbose']:
         print('Unpacking {} to {}'.format(archive, args.output_dir))
-    shutil.unpack_archive(archive, args.output_dir)
 
+    unpack_archive = _unpack_archive
+    if six.PY3:
+        unpack_archive = shutil.unpack_archive
+
+    unpack_archive(archive, args.output_dir)
     # NOTE: cleanup() callback method deletes temporary directory
 
 
