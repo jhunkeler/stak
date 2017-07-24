@@ -18,13 +18,13 @@ except ImportError:
     from urllib2 import urlopen, HTTPError
 
 
-
 CFG = dict(name='stak-notebooks',
            repo='https://github.com/spacetelescope',
            rev=version.__version__,
            ext='.tar.gz',
            tmpdir='',
            verbose=False)
+
 
 def _unpack_archive(filename, destdir):
     '''Python 2.7 compat
@@ -47,7 +47,9 @@ def download(url, destdir):
                 chunk = data.read(bsize)
             data.close()
     except HTTPError as e:
-        print('Requested invalid release version: {}\n(Developers, use "-l" for latest master)\n\nReason: {}\n'.format(version.__version__, e), file=sys.stderr)
+        print('Requested invalid release version: {}\n'
+              '(Developers, use "-l" for latest master)\n\n'
+              'Reason: {}\n'.format(version.__version__, e), file=sys.stderr)
         exit(1)
 
     return filename
@@ -68,9 +70,12 @@ def main():
     global verbose
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-l', '--latest', action='store_true', help='Ignore current release and download the latest available')
-    parser.add_argument('-o', '--output-dir', action='store', type=str, default=os.curdir)
-    parser.add_argument('-f', '--force', action='store_true', help='Overwrite existing notebook directory')
+    parser.add_argument('-l', '--latest', action='store_true',
+                        help='Ignore current release and download the latest available')
+    parser.add_argument('-o', '--output-dir', action='store',
+                        type=str, default=os.curdir)
+    parser.add_argument('-f', '--force', action='store_true',
+                        help='Overwrite existing notebook directory')
     parser.add_argument('-v', '--verbose', action='store_true')
     args = parser.parse_args()
 
@@ -80,13 +85,15 @@ def main():
     if args.latest:
         CFG['rev'] = 'master'
 
-    # If the user issues an output directory, create the directory if it does not exist
+    # If the user issues an output directory, create the directory if it does
+    # not exist
     args.output_dir = os.path.abspath(args.output_dir)
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir, mode=0o755)
 
     # Do not clobber existing notebooks if they exist
-    expected = os.path.abspath(os.path.join(args.output_dir, '-'.join([CFG['name'], CFG['rev']])))
+    expected = os.path.abspath(os.path.join(
+        args.output_dir, '-'.join([CFG['name'], CFG['rev']])))
     if os.path.exists(expected) and not args.force:
         print('{} exists.\nUse --force to overwrite.'.format(expected), file=sys.stderr)
         exit(1)
@@ -95,7 +102,8 @@ def main():
     CFG['tmpdir'] = tempfile.mkdtemp()
 
     # Compile URL
-    url = '/'.join([CFG['repo'], CFG['name'], 'archive', CFG['rev'] + CFG['ext']])
+    url = '/'.join([CFG['repo'], CFG['name'],
+                    'archive', CFG['rev'] + CFG['ext']])
 
     # Download archive to temp directory
     if CFG['verbose']:
